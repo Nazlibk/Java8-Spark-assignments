@@ -1,0 +1,44 @@
+create schema
+ Pickup(
+   taxiId int,
+   pickupLocation int
+ );	
+
+create schema
+ Dropoff(
+   taxiId int,
+   dropoffLocation int,
+   amount int
+ );
+
+create schema
+ TaxiRoute(
+   pickupLocation int,
+   dropoffLocation int,
+   amount int
+ );
+
+insert into TaxiRoute
+    select  a.pickupLocation as pickupLocation,
+                b.dropoffLocation as dropoffLocation, sum(b.amount) as amount
+    from pattern	
+	[every (a=Pickup
+	->	
+	b=Dropoff(	
+	taxiId=a.taxiId))].win:time(40 min)
+     group by a.pickupLocation, b.dropoffLocation
+order by amount asc;
+
+
+select  a.pickupLocation as pickupLocation,
+        a.dropoffLocation as dropoffLocation, a.amount+b.amount as amount
+from pattern	
+	[every a=TaxiRoute
+	->	
+	every b=TaxiRoute(
+        a.pickupLocation= b.dropoffLocation and b.pickupLocation= 
+        a.dropoffLocation)].win:time(40 min)
+order by amount asc
+limit 10;
+
+
